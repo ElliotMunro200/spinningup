@@ -5,6 +5,8 @@ import torch
 from torch.optim import Adam
 import gym
 import time
+# spinup only gives AC neural nets + logging, so not needed, so can remove dependency on spinup and possibly then use
+# Hopper-v4 which has improved rgb rendering (possibly desired?) --> use either and see if any issue comes up.
 import spinup.algos.pytorch.td3.core as core
 from spinup.utils.logx import EpochLogger
 
@@ -282,6 +284,7 @@ def td3(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
     total_steps = steps_per_epoch * epochs
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
+    print_actions = False
 
     # Main loop: collect experience in env and update/log each epoch
     for t in range(total_steps):
@@ -293,9 +296,12 @@ def td3(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
             a = get_action(o, act_noise)
         else:
             a = env.action_space.sample()
+        if print_actions:
+            print(f"timestep: {t} | good action: {a}")
 
         # Step the env
         o2, r, d, _ = env.step(a)
+
         ep_ret += r
         ep_len += 1
 
@@ -314,6 +320,8 @@ def td3(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         # End of trajectory handling
         if d or (ep_len == max_ep_len):
             logger.store(EpRet=ep_ret, EpLen=ep_len)
+            if ep_ret >= 2500.0:
+                print_actions = True
             o, ep_ret, ep_len = env.reset(), 0, 0
 
         # Update handling
@@ -355,7 +363,7 @@ if __name__ == '__main__':
     parser.add_argument('--l', type=int, default=2)
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--seed', '-s', type=int, default=0)
-    parser.add_argument('--epochs', type=int, default=50)
+    parser.add_argument('--epochs', type=int, default=250)
     parser.add_argument('--exp_name', type=str, default='td3')
     args = parser.parse_args()
 
